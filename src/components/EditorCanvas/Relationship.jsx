@@ -20,6 +20,7 @@ import {
   getRelationshipFields,
   getTableWidth,
 } from "../../utils/utils";
+import { formatCardinalityRange } from "../../utils/cardinalityRange";
 
 const labelFontSize = 16;
 const cardinalityOffset = 28;
@@ -273,13 +274,13 @@ const RelationshipPath = memo(function RelationshipPath({
           <CardinalityLabel
             x={anchors.start.x}
             y={anchors.start.y}
-            text={cardinalityStart}
+            text={formatCardinalityRange(data.startMinCardinality, cardinalityStart)}
             color={data.color}
           />
           <CardinalityLabel
             x={anchors.end.x}
             y={anchors.end.y}
-            text={cardinalityEnd}
+            text={formatCardinalityRange(data.endMinCardinality, cardinalityEnd)}
             color={data.color}
           />
         </>

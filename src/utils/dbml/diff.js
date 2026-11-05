@@ -21,6 +21,8 @@ const RELATIONSHIP_KEYS = [
   "endFieldId",
   "fields",
   "cardinality",
+  "startMinCardinality",
+  "endMinCardinality",
   "updateConstraint",
   "deleteConstraint",
 ];

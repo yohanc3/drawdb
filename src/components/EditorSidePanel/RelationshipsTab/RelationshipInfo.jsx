@@ -21,6 +21,7 @@ import {
 } from "../../../data/constants";
 import { useDiagram, useLayout, useUndoRedo } from "../../../hooks";
 import { getRelationshipFields } from "../../../utils/utils";
+import { cardinalityMinimum } from "../../../utils/cardinalityRange";
 import ColorPicker from "../ColorPicker";
 import { useTranslation } from "react-i18next";
 import { useMemo, useRef, useState } from "react";
@@ -168,6 +169,8 @@ export default function RelationshipInfo({ data }) {
       fields: swappedPairs,
       startFieldId: swappedPairs[0].startFieldId,
       endFieldId: swappedPairs[0].endFieldId,
+      startMinCardinality: cardinalityMinimum(data.endMinCardinality),
+      endMinCardinality: cardinalityMinimum(data.startMinCardinality),
     };
     setUndoStack((prev) => [
       ...prev,
@@ -182,6 +185,8 @@ export default function RelationshipInfo({ data }) {
           fields: pairs.map((p) => ({ ...p })),
           startFieldId: data.startFieldId,
           endFieldId: data.endFieldId,
+          startMinCardinality: data.startMinCardinality,
+          endMinCardinality: data.endMinCardinality,
         },
         redo,
         message: t("edit_relationship", {
@@ -213,6 +218,29 @@ export default function RelationshipInfo({ data }) {
     ]);
     setRedoStack([]);
     updateRelationship(data.id, { cardinality: value });
+  };
+
+  const changeMinimum = (side, value) => {
+    if (layout.readOnly) return;
+    const key = `${side}MinCardinality`;
+    const minimum = cardinalityMinimum(value);
+    if (minimum === cardinalityMinimum(data[key])) return;
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        action: Action.EDIT,
+        element: ObjectType.RELATIONSHIP,
+        rid: data.id,
+        undo: { [key]: data[key] },
+        redo: { [key]: minimum },
+        message: t("edit_relationship", {
+          refName: data.name,
+          extra: "[cardinality]",
+        }),
+      },
+    ]);
+    setRedoStack([]);
+    updateRelationship(data.id, { [key]: minimum });
   };
 
   const changeConstraint = (key, value) => {
@@ -291,6 +319,31 @@ export default function RelationshipInfo({ data }) {
         className="w-full"
         onChange={changeCardinality}
       />
+
+      <Row gutter={6} className="mt-2">
+        <Col span={12}>
+          <div className="text-xs font-semibold mb-1">{t("foreign")} {t("minimum")}</div>
+          <Select
+            optionList={[{ label: "0", value: 0 }, { label: "1", value: 1 }]}
+            value={cardinalityMinimum(data.startMinCardinality)}
+            aria-label={`${t("foreign")} ${t("minimum")}`}
+            disabled={layout.readOnly}
+            className="w-full"
+            onChange={(value) => changeMinimum("start", value)}
+          />
+        </Col>
+        <Col span={12}>
+          <div className="text-xs font-semibold mb-1">{t("primary")} {t("minimum")}</div>
+          <Select
+            optionList={[{ label: "0", value: 0 }, { label: "1", value: 1 }]}
+            value={cardinalityMinimum(data.endMinCardinality)}
+            aria-label={`${t("primary")} ${t("minimum")}`}
+            disabled={layout.readOnly}
+            className="w-full"
+            onChange={(value) => changeMinimum("end", value)}
+          />
+        </Col>
+      </Row>
 
       {data.cardinality !== Cardinality.ONE_TO_ONE && (
         <>

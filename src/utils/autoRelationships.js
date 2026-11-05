@@ -87,6 +87,8 @@ export function findAutoFKRelationships(tables = [], existingRelationships = [])
             cardinality: fkField.unique
               ? Cardinality.ONE_TO_ONE
               : Cardinality.MANY_TO_ONE,
+            startMinCardinality: 0,
+            endMinCardinality: 0,
             updateConstraint: Constraint.NONE,
             deleteConstraint: Constraint.NONE,
           };

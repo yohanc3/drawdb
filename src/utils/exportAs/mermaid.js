@@ -1,22 +1,32 @@
 import { Cardinality } from "../../data/constants";
 import { dbToTypes } from "../../data/datatypes";
 import i18n from "../../i18n/i18n";
+import { cardinalityMinimum } from "../cardinalityRange";
 
 export function jsonToMermaid(obj) {
   function getMermaidRelationship(relationship) {
-    switch (relationship) {
+    let startMany = false;
+    let endMany = false;
+    switch (relationship.cardinality) {
       case i18n.t(Cardinality.ONE_TO_ONE):
       case Cardinality.ONE_TO_ONE:
-        return "||--||";
+        break;
       case i18n.t(Cardinality.MANY_TO_ONE):
       case Cardinality.MANY_TO_ONE:
-        return "}o--||";
+        startMany = true;
+        break;
       case i18n.t(Cardinality.ONE_TO_MANY):
       case Cardinality.ONE_TO_MANY:
-        return "||--o{";
+        endMany = true;
+        break;
       default:
         return "--";
     }
+    const startMin = cardinalityMinimum(relationship.startMinCardinality);
+    const endMin = cardinalityMinimum(relationship.endMinCardinality);
+    const start = startMany ? (startMin ? "}|" : "}o") : (startMin ? "||" : "|o");
+    const end = endMany ? (endMin ? "|{" : "o{") : (endMin ? "||" : "o|");
+    return `${start}--${end}`;
   }
 
   const mermaidEntities = obj.tables
@@ -45,7 +55,7 @@ export function jsonToMermaid(obj) {
             (t) => t.id === r.startTableId,
           ).name;
           const endTable = obj.tables.find((t) => t.id === r.endTableId).name;
-          return `\t${startTable} ${getMermaidRelationship(r.cardinality)} ${endTable} : references`;
+          return `\t${startTable} ${getMermaidRelationship(r)} ${endTable} : references`;
         })
         .join("\n")
     : "";

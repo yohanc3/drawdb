@@ -240,6 +240,8 @@ export const jsonSchema = {
           endFieldId: { type: ["integer", "string"] },
           name: { type: "string" },
           cardinality: { type: "string" },
+          startMinCardinality: { type: "integer", enum: [0, 1] },
+          endMinCardinality: { type: "integer", enum: [0, 1] },
           updateConstraint: { type: "string" },
           deleteConstraint: { type: "string" },
           id: { type: ["integer", "string"] },

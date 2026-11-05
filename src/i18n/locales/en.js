@@ -147,6 +147,7 @@ const en = {
     foreign: "Foreign",
     references: "References",
     cardinality: "Cardinality",
+    minimum: "Minimum",
     on_update: "On update",
     on_delete: "On delete",
     swap: "Swap",

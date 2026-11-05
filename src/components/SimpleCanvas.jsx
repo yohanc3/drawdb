@@ -7,6 +7,7 @@ import {
   tableWidth,
 } from "../data/constants";
 import { calcPath } from "../utils/calcPath";
+import { formatCardinalityRange } from "../utils/cardinalityRange";
 
 function Table({ table, grab }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -86,12 +87,12 @@ function Relationship({ relationship, tables }) {
 
   switch (relationship.cardinality) {
     case Cardinality.MANY_TO_ONE:
-      cardinalityStart = "n";
+      cardinalityStart = relationship.manyLabel || "n";
       cardinalityEnd = "1";
       break;
     case Cardinality.ONE_TO_MANY:
       cardinalityStart = "1";
-      cardinalityEnd = "n";
+      cardinalityEnd = relationship.manyLabel || "n";
       break;
     case Cardinality.ONE_TO_ONE:
       cardinalityStart = "1";
@@ -100,6 +101,9 @@ function Relationship({ relationship, tables }) {
     default:
       break;
   }
+
+  cardinalityStart = formatCardinalityRange(relationship.startMinCardinality, cardinalityStart);
+  cardinalityEnd = formatCardinalityRange(relationship.endMinCardinality, cardinalityEnd);
 
   const length = 32;
 
@@ -138,7 +142,7 @@ function Relationship({ relationship, tables }) {
       />
       {pathRef.current && (
         <>
-          <circle cx={start.x} cy={start.y} r="12" fill="grey" />
+          <rect x={start.x - 28} y={start.y - 12} width="56" height="24" rx="12" fill="grey" />
           <text
             x={start.x}
             y={start.y}
@@ -149,7 +153,7 @@ function Relationship({ relationship, tables }) {
           >
             {cardinalityStart}
           </text>
-          <circle cx={end.x} cy={end.y} r="12" fill="grey" />
+          <rect x={end.x - 28} y={end.y - 12} width="56" height="24" rx="12" fill="grey" />
           <text
             x={end.x}
             y={end.y}
