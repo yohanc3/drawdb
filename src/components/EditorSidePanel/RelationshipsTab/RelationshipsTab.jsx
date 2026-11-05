@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Collapse } from "@douyinfe/semi-ui";
 import { useSelect, useDiagram, useSaveState, useLayout } from "../../../hooks";
 import Empty from "../Empty";
@@ -8,12 +8,17 @@ import { ObjectType, State } from "../../../data/constants";
 import { useTranslation } from "react-i18next";
 import { SortableList } from "../../SortableList/SortableList";
 import { DragHandle } from "../../SortableList/DragHandle";
+import { relationshipReference } from "../../../utils/relationshipReference";
 
 export default function RelationshipsTab() {
-  const { relationships, setRelationships } = useDiagram();
+  const { relationships, tables, setRelationships } = useDiagram();
   const { selectedElement, setSelectedElement } = useSelect();
   const { setSaveState } = useSaveState();
   const { t } = useTranslation();
+  const tablesById = useMemo(
+    () => new Map(tables.map((table) => [table.id, table])),
+    [tables],
+  );
 
   return (
     <>
@@ -48,7 +53,12 @@ export default function RelationshipsTab() {
             items={relationships}
             onChange={(newRelationships) => setRelationships(newRelationships)}
             afterChange={() => setSaveState(State.SAVING)}
-            renderItem={renderRelationshipListItem}
+            renderItem={(relationship) => (
+              <RelationshipListItem
+                relationship={relationship}
+                tablesById={tablesById}
+              />
+            )}
           />
         </Collapse>
       )}
@@ -56,15 +66,12 @@ export default function RelationshipsTab() {
   );
 }
 
-const renderRelationshipListItem = (relationship) => (
-  <RelationshipListItem relationship={relationship} />
-);
-
 const RelationshipListItem = memo(function RelationshipListItem({
   relationship,
+  tablesById,
 }) {
   const { layout } = useLayout();
-  const { t } = useTranslation();
+  const reference = relationshipReference(relationship, tablesById);
 
   return (
     <div id={`scroll_ref_${relationship.id}`}>
@@ -73,8 +80,11 @@ const RelationshipListItem = memo(function RelationshipListItem({
         header={
           <div className="w-full flex items-center gap-2">
             <DragHandle readOnly={layout.readOnly} id={relationship.id} />
-            <div className="overflow-hidden text-ellipsis whitespace-nowrap">
-              {relationship.name?.trim() || t("unnamed_relationship")}
+            <div
+              className="overflow-hidden text-ellipsis whitespace-nowrap"
+              title={reference}
+            >
+              {relationship.name?.trim() || reference}
             </div>
           </div>
         }

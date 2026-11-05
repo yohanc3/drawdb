@@ -6,12 +6,10 @@ import {
   getTableWidth,
 } from "./utils";
 
-const nodeSep = 60;
-const rankSep = 110;
+const nodeSep = 150;
+const rankSep = 260;
 const isolatedGap = 60;
 const targetRatio = 16 / 9;
-const minRatio = 1 / 3;
-const maxRatio = 4;
 
 export function autoArrange(tables, relationships, settings) {
   const movable = tables.filter((table) => !table.locked);
@@ -69,7 +67,6 @@ export function autoArrange(tables, relationships, settings) {
       y: node.y - node.height / 2,
       width: node.width,
       height: node.height,
-      rank: Math.round(node.x),
     };
   });
 
@@ -77,95 +74,7 @@ export function autoArrange(tables, relationships, settings) {
     width: Math.max(0, ...placed.map((p) => p.x + p.width)),
     height: Math.max(0, ...placed.map((p) => p.y + p.height)),
   });
-  let { width: maxX, height: maxY } = extent();
-
-  const ratio = maxX / maxY;
-  if (placed.length > 1 && (ratio < minRatio || ratio > maxRatio)) {
-    const ranks = new Map();
-    for (const p of [...placed].sort((a, b) => a.y - b.y)) {
-      if (!ranks.has(p.rank)) ranks.set(p.rank, []);
-      ranks.get(p.rank).push(p);
-    }
-
-    const rankOrder = [...ranks.keys()].sort((a, b) => b - a);
-    const buildColumns = (heightLimit) => {
-      const columns = [];
-      for (const rank of rankOrder) {
-        const nodes = ranks.get(rank);
-        const rankHeight = nodes.reduce(
-          (sum, p) => sum + p.height + nodeSep,
-          0,
-        );
-        const columnHeight =
-          rankHeight / Math.max(1, Math.ceil(rankHeight / heightLimit));
-        let column = null;
-        for (const p of nodes) {
-          if (!column || column.height + p.height > columnHeight) {
-            column = { nodes: [], width: 0, height: 0 };
-            columns.push(column);
-          }
-          column.nodes.push({ p, offset: column.height });
-          column.height += p.height + nodeSep;
-          column.width = Math.max(column.width, p.width);
-        }
-      }
-      return columns;
-    };
-
-    const placeColumns = (columns, bandWidth) => {
-      const slots = [];
-      let x = 0;
-      let y = 0;
-      let width = 0;
-      let bandHeight = 0;
-      for (const column of columns) {
-        let gap = x === 0 ? 0 : rankSep;
-        if (x > 0 && x + gap + column.width > bandWidth) {
-          y += bandHeight + rankSep;
-          x = 0;
-          gap = 0;
-          bandHeight = 0;
-        }
-        slots.push({ column, x: x + gap, y });
-        x += gap + column.width;
-        width = Math.max(width, x);
-        bandHeight = Math.max(bandHeight, column.height - nodeSep);
-      }
-      const height = y + bandHeight;
-      return {
-        slots,
-        score: Math.abs(Math.log(width / height / targetRatio)),
-      };
-    };
-
-    const tallest = Math.max(...placed.map((p) => p.height + nodeSep));
-    const longest = Math.max(
-      ...[...ranks.values()].map((nodes) =>
-        nodes.reduce((sum, p) => sum + p.height + nodeSep, 0),
-      ),
-    );
-    let best = null;
-    for (let step = 0; step <= 12; step++) {
-      const columns = buildColumns(
-        tallest * Math.pow(longest / tallest, step / 12),
-      );
-      const totalWidth =
-        columns.reduce((sum, column) => sum + column.width + rankSep, 0) -
-        rankSep;
-      for (let bands = 1; bands <= columns.length; bands++) {
-        const candidate = placeColumns(columns, totalWidth / bands + 1);
-        if (!best || candidate.score < best.score) best = candidate;
-      }
-    }
-    for (const { column, x, y } of best.slots) {
-      for (const { p, offset } of column.nodes) {
-        p.x = x;
-        p.y = y + offset;
-      }
-    }
-
-    ({ width: maxX, height: maxY } = extent());
-  }
+  const { width: maxX, height: maxY } = extent();
 
   const positions = placed.map(({ id, x, y }) => ({ id, x, y }));
 

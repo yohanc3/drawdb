@@ -7,11 +7,7 @@ import {
   Collapse,
   Card,
 } from "@douyinfe/semi-ui";
-import {
-  IconClose,
-  IconDeleteStroked,
-  IconPlus,
-} from "@douyinfe/semi-icons";
+import { IconClose, IconDeleteStroked, IconPlus } from "@douyinfe/semi-icons";
 import {
   Cardinality,
   Constraint,
@@ -148,9 +144,7 @@ export default function RelationshipInfo({ data }) {
 
   const removePair = (index) => {
     if (pairs.length <= 1) return;
-    const newPairs = pairs
-      .filter((_, i) => i !== index)
-      .map((p) => ({ ...p }));
+    const newPairs = pairs.filter((_, i) => i !== index).map((p) => ({ ...p }));
     commitPairs(newPairs, "[remove field]");
   };
 
@@ -265,6 +259,28 @@ export default function RelationshipInfo({ data }) {
     updateRelationship(data.id, { [undoKey]: value });
   };
 
+  const changeRouteOffset = (value) => {
+    if (layout.readOnly || !Number.isFinite(value)) return;
+    const previous = Number(data.routeOffset) || 0;
+    if (previous === value) return;
+    setUndoStack((stack) => [
+      ...stack,
+      {
+        action: Action.EDIT,
+        element: ObjectType.RELATIONSHIP,
+        rid: data.id,
+        undo: { routeOffset: previous },
+        redo: { routeOffset: value },
+        message: t("edit_relationship", {
+          refName: data.name,
+          extra: "[route offset]",
+        }),
+      },
+    ]);
+    setRedoStack([]);
+    updateRelationship(data.id, { routeOffset: value });
+  };
+
   return (
     <>
       <div className="flex items-center mb-2.5">
@@ -321,9 +337,14 @@ export default function RelationshipInfo({ data }) {
 
       <Row gutter={6} className="mt-2">
         <Col span={12}>
-          <div className="text-xs font-semibold mb-1">{t("foreign")} {t("minimum")}</div>
+          <div className="text-xs font-semibold mb-1">
+            {t("foreign")} {t("minimum")}
+          </div>
           <Select
-            optionList={[{ label: "0", value: 0 }, { label: "1", value: 1 }]}
+            optionList={[
+              { label: "0", value: 0 },
+              { label: "1", value: 1 },
+            ]}
             value={cardinalityMinimum(data.startMinCardinality)}
             aria-label={`${t("foreign")} ${t("minimum")}`}
             disabled={layout.readOnly}
@@ -332,9 +353,14 @@ export default function RelationshipInfo({ data }) {
           />
         </Col>
         <Col span={12}>
-          <div className="text-xs font-semibold mb-1">{t("primary")} {t("minimum")}</div>
+          <div className="text-xs font-semibold mb-1">
+            {t("primary")} {t("minimum")}
+          </div>
           <Select
-            optionList={[{ label: "0", value: 0 }, { label: "1", value: 1 }]}
+            optionList={[
+              { label: "0", value: 0 },
+              { label: "1", value: 1 },
+            ]}
             value={cardinalityMinimum(data.endMinCardinality)}
             aria-label={`${t("primary")} ${t("minimum")}`}
             disabled={layout.readOnly}
@@ -352,7 +378,9 @@ export default function RelationshipInfo({ data }) {
           <Input
             value={data.manyLabel}
             placeholder={t("label")}
-            onChange={(value) => updateRelationship(data.id, { manyLabel: value })}
+            onChange={(value) =>
+              updateRelationship(data.id, { manyLabel: value })
+            }
             onFocus={(e) => setEditField({ manyLabel: e.target.value })}
             readonly={layout.readOnly}
             onBlur={(e) => {
@@ -404,6 +432,42 @@ export default function RelationshipInfo({ data }) {
           />
         </Col>
       </Row>
+      <div className="my-3">
+        <div className="font-semibold mb-1">Track offset</div>
+        <div className="flex items-center gap-2">
+          <Button
+            aria-label="Move track backward"
+            disabled={layout.readOnly}
+            onClick={() =>
+              changeRouteOffset((Number(data.routeOffset) || 0) - 18)
+            }
+          >
+            −
+          </Button>
+          <span
+            className="min-w-16 text-center font-mono"
+            aria-label="Track offset in pixels"
+          >
+            {Number(data.routeOffset) || 0}px
+          </span>
+          <Button
+            aria-label="Move track forward"
+            disabled={layout.readOnly}
+            onClick={() =>
+              changeRouteOffset((Number(data.routeOffset) || 0) + 18)
+            }
+          >
+            +
+          </Button>
+          <Button
+            aria-label="Reset track offset"
+            disabled={layout.readOnly || !data.routeOffset}
+            onClick={() => changeRouteOffset(0)}
+          >
+            Reset
+          </Button>
+        </div>
+      </div>
       <Card
         bodyStyle={{ padding: "4px" }}
         style={{ marginTop: "12px", marginBottom: "12px" }}

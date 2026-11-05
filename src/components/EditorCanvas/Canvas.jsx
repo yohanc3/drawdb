@@ -37,6 +37,7 @@ import { useEventListener } from "usehooks-ts";
 import {
   areFieldsCompatible,
   getRelatedFieldKeysByTable,
+  getRelationshipFields,
 } from "../../utils/utils";
 import {
   getViewHeight,
@@ -51,6 +52,7 @@ import {
 import { State, noteWidth } from "../../data/constants";
 import { nanoid } from "nanoid";
 import { clientId } from "../../api/cloud";
+import { buildRelationshipRouting } from "../../utils/relationshipRouting";
 
 const noHiddenAreas = {
   areaHiddenTableIds: new Set(),
@@ -132,6 +134,7 @@ export default function Canvas() {
     tableId: null,
     fieldId: null,
   });
+  const [hoveredRelationshipId, setHoveredRelationshipId] = useState(null);
   const [panning, setPanning] = useState({
     isPanning: false,
     panStart: { x: 0, y: 0 },
@@ -210,6 +213,49 @@ export default function Canvas() {
     });
     return { areaHiddenTableIds, tableCountByArea };
   }, [areas, tables]);
+
+  const relationshipRoutes = useMemo(
+    () =>
+      buildRelationshipRouting({
+        relationships: relationships.filter(
+          (r) =>
+            !areaHiddenTableIds.has(r.startTableId) &&
+            !areaHiddenTableIds.has(r.endTableId),
+        ),
+        tables: tables.filter(
+          (table) => !table.hidden && !areaHiddenTableIds.has(table.id),
+        ),
+        relatedFieldKeysByTable,
+        showComments: settings.showComments,
+      }),
+    [
+      relationships,
+      tables,
+      relatedFieldKeysByTable,
+      areaHiddenTableIds,
+      settings.showComments,
+    ],
+  );
+
+  const highlightedFields = useMemo(() => {
+    const relationship = relationships.find(
+      (r) => r.id === hoveredRelationshipId,
+    );
+    if (!relationship) return new Map();
+    const result = new Map();
+    for (const { startFieldId, endFieldId } of getRelationshipFields(
+      relationship,
+    )) {
+      for (const [tableId, fieldId] of [
+        [relationship.startTableId, startFieldId],
+        [relationship.endTableId, endFieldId],
+      ]) {
+        if (!result.has(tableId)) result.set(tableId, new Set());
+        result.get(tableId).add(fieldId);
+      }
+    }
+    return result;
+  }, [hoveredRelationshipId, relationships]);
 
   const isSameElement = (el1, el2) => {
     return el1.id === el2.id && el1.type === el2.type;
@@ -1013,6 +1059,12 @@ export default function Canvas() {
               <Relationship
                 key={e.id}
                 data={e}
+                route={relationshipRoutes.get(e.id)}
+                onHoverChange={setHoveredRelationshipId}
+                dimmed={
+                  hoveredRelationshipId !== null &&
+                  hoveredRelationshipId !== e.id
+                }
                 startTable={tablesById.get(e.startTableId)}
                 endTable={tablesById.get(e.endTableId)}
                 startRelatedFieldKeys={relatedFieldKeysByTable.get(
@@ -1030,6 +1082,7 @@ export default function Canvas() {
                 isSelected={selectedTableIds.has(table.id)}
                 database={database}
                 relatedFieldKeys={relatedFieldKeysByTable.get(table.id)}
+                highlightedFieldIds={highlightedFields.get(table.id)}
                 setHoveredTable={setHoveredTable}
                 handleGripField={handleGripField}
                 setLinkingLine={setLinkingLine}
@@ -1069,13 +1122,33 @@ export default function Canvas() {
               strokeDasharray={10}
             />
           )}
-          {people.filter((person) => person.id !== clientId && person.cursor).map((person) => (
-            <g key={person.id} transform={`translate(${person.cursor.x} ${person.cursor.y})`} className="pointer-events-none">
-              <path d="M 0 0 L 0 19 L 5 14 L 10 24 L 13 22 L 8 12 L 16 12 Z" fill={person.color} stroke="white" strokeWidth="1.5" />
-              <rect x="14" y="16" width={Math.max(48, person.name.length * 8 + 12)} height="22" rx="4" fill={person.color} />
-              <text x="20" y="31" fill="white" fontSize="12">{person.name}</text>
-            </g>
-          ))}
+          {people
+            .filter((person) => person.id !== clientId && person.cursor)
+            .map((person) => (
+              <g
+                key={person.id}
+                transform={`translate(${person.cursor.x} ${person.cursor.y})`}
+                className="pointer-events-none"
+              >
+                <path
+                  d="M 0 0 L 0 19 L 5 14 L 10 24 L 13 22 L 8 12 L 16 12 Z"
+                  fill={person.color}
+                  stroke="white"
+                  strokeWidth="1.5"
+                />
+                <rect
+                  x="14"
+                  y="16"
+                  width={Math.max(48, person.name.length * 8 + 12)}
+                  height="22"
+                  rx="4"
+                  fill={person.color}
+                />
+                <text x="20" y="31" fill="white" fontSize="12">
+                  {person.name}
+                </text>
+              </g>
+            ))}
         </svg>
       </div>
       <TableEditSheet />

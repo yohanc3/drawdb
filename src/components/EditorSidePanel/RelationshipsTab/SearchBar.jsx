@@ -1,23 +1,40 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSelect, useDiagram } from "../../../hooks";
 import { AutoComplete } from "@douyinfe/semi-ui";
 import { IconSearch } from "@douyinfe/semi-icons";
 import { ObjectType } from "../../../data/constants";
 import { useTranslation } from "react-i18next";
+import { relationshipReference } from "../../../utils/relationshipReference";
 
 export default function SearchBar() {
-  const { relationships } = useDiagram();
+  const { relationships, tables } = useDiagram();
   const [searchText, setSearchText] = useState("");
   const { setSelectedElement } = useSelect();
   const { t } = useTranslation();
 
-  const [filteredResult, setFilteredResult] = useState(
-    relationships.map((t) => t.name).filter(Boolean),
+  const tablesById = useMemo(
+    () => new Map(tables.map((table) => [table.id, table])),
+    [tables],
   );
+  const names = useMemo(
+    () =>
+      relationships.map((relationship) => ({
+        id: relationship.id,
+        label:
+          relationship.name?.trim() ||
+          relationshipReference(relationship, tablesById),
+      })),
+    [relationships, tablesById],
+  );
+  const [filteredResult, setFilteredResult] = useState([]);
 
   const handleStringSearch = (value) => {
     setFilteredResult(
-      relationships.map((t) => t.name).filter((i) => i && i.includes(value)),
+      names
+        .filter(({ label }) =>
+          label.toLowerCase().includes(value.toLowerCase()),
+        )
+        .map(({ label }) => label),
     );
   };
 
@@ -32,9 +49,9 @@ export default function SearchBar() {
       onSearch={(v) => handleStringSearch(v)}
       onChange={(v) => setSearchText(v)}
       onSelect={(v) => {
-        const relationship = relationships.find((t) => t.name === v);
-        if (!relationship) return;
-        const { id } = relationship;
+        const found = names.find(({ label }) => label === v);
+        if (!found) return;
+        const { id } = found;
         setSelectedElement((prev) => ({
           ...prev,
           id: id,

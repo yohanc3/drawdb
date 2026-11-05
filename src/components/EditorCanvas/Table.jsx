@@ -52,6 +52,7 @@ export default memo(function Table({
   isSelected,
   database,
   relatedFieldKeys,
+  highlightedFieldIds,
   onPointerDown,
   setHoveredTable,
   handleGripField,
@@ -450,7 +451,7 @@ export default memo(function Table({
       <div
         className={`${
           index === visibleFields.length - 1 ? "" : "border-b border-gray-400"
-        } group w-full overflow-hidden`}
+        } ${highlightedFieldIds?.has(fieldData.id) ? "bg-sky-100 dark:bg-sky-900/60" : ""} group w-full overflow-hidden`}
         onPointerEnter={(e) => {
           if (!e.isPrimary) return;
 
@@ -518,17 +519,26 @@ export default memo(function Table({
               {fieldData.name}
             </span>
             {fieldData.primary && (
-              <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-900 dark:text-blue-100" title={t("primary_key")}>
+              <span
+                className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                title={t("primary_key")}
+              >
                 PK
               </span>
             )}
             {foreignKeyFieldIds.has(fieldData.id) && (
-              <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-100" title={t("foreign_key")}>
+              <span
+                className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                title={t("foreign_key")}
+              >
                 FK
               </span>
             )}
             {fieldData.notNull && (
-              <span className="shrink-0 rounded bg-zinc-200 px-1 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100" title={t("not_null")}>
+              <span
+                className="shrink-0 rounded bg-zinc-200 px-1 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100"
+                title={t("not_null")}
+              >
                 NOT NULL
               </span>
             )}
@@ -550,7 +560,6 @@ export default memo(function Table({
               />
             ) : (
               <div className="flex gap-1 items-center">
-                {!fieldData.notNull && <span className="font-mono">?</span>}
                 <span
                   className={
                     "font-mono " +

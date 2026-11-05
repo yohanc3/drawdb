@@ -21,12 +21,16 @@ import {
   getTableWidth,
 } from "../../utils/utils";
 import { formatCardinalityRange } from "../../utils/cardinalityRange";
+import { relationshipReference } from "../../utils/relationshipReference";
 
 const labelFontSize = 16;
 const cardinalityOffset = 28;
 
 export default memo(function Relationship({
   data,
+  route,
+  onHoverChange,
+  dimmed,
   startTable,
   endTable,
   startRelatedFieldKeys,
@@ -53,6 +57,9 @@ export default memo(function Relationship({
   return (
     <RelationshipPath
       data={data}
+      route={route}
+      onHoverChange={onHoverChange}
+      dimmed={dimmed}
       startTable={startTable}
       endTable={endTable}
       startRelatedFieldKeys={startRelatedFieldKeys}
@@ -97,6 +104,9 @@ export function RelationshipEditSheet() {
 
 const RelationshipPath = memo(function RelationshipPath({
   data,
+  route,
+  onHoverChange,
+  dimmed,
   startTable,
   endTable,
   startRelatedFieldKeys,
@@ -166,8 +176,19 @@ const RelationshipPath = memo(function RelationshipPath({
   const d = useMemo(() => {
     if (!pathValues) return null;
     if (composite) return composite.path;
+    if (route) return route.path;
     return calcPath(pathValues, 1, settings.showComments);
-  }, [pathValues, composite, settings.showComments]);
+  }, [pathValues, composite, route, settings.showComments]);
+
+  const reference = useMemo(() => {
+    return relationshipReference(
+      data,
+      new Map([
+        [data.startTableId, startTable],
+        [data.endTableId, endTable],
+      ]),
+    );
+  }, [data, startTable, endTable]);
 
   const pathRef = useRef();
   const labelRef = useRef();
@@ -189,6 +210,10 @@ const RelationshipPath = memo(function RelationshipPath({
       labelPoint = composite.labelPoint;
       startPoint = composite.startCardinality;
       endPoint = composite.endCardinality;
+    } else if (route) {
+      labelPoint = route.labelPoint;
+      startPoint = route.startCardinality;
+      endPoint = route.endCardinality;
     } else {
       const path = pathRef.current;
       const pathLength = path.getTotalLength();
@@ -205,7 +230,7 @@ const RelationshipPath = memo(function RelationshipPath({
       start: { x: startPoint.x, y: startPoint.y },
       end: { x: endPoint.x, y: endPoint.y },
     });
-  }, [d, composite, data.name, settings.showRelationshipLabels]);
+  }, [d, composite, route, data.name, settings.showRelationshipLabels]);
 
   let cardinalityStart = "1";
   let cardinalityEnd = "1";
@@ -236,10 +261,18 @@ const RelationshipPath = memo(function RelationshipPath({
   return (
     <g
       className="select-none group"
+      opacity={dimmed ? 0.14 : 1}
       onDoubleClick={onEdit}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      onPointerEnter={() => {
+        setHovered(true);
+        onHoverChange?.(data.id);
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+        onHoverChange?.(null);
+      }}
     >
+      <title>{reference}</title>
       {/* invisible wider path for better hover ux */}
       <path
         d={d}
@@ -251,6 +284,8 @@ const RelationshipPath = memo(function RelationshipPath({
       <path
         ref={pathRef}
         d={d}
+        data-relationship-id={data.id}
+        data-reference={reference}
         className="relationship-path"
         style={{ stroke: hovered ? undefined : data.color }}
         fill="none"
@@ -271,18 +306,28 @@ const RelationshipPath = memo(function RelationshipPath({
       )}
       {anchors && settings.showCardinality && (
         <>
-          <CardinalityLabel
-            x={anchors.start.x}
-            y={anchors.start.y}
-            text={formatCardinalityRange(data.startMinCardinality, cardinalityStart)}
-            color={data.color}
-          />
-          <CardinalityLabel
-            x={anchors.end.x}
-            y={anchors.end.y}
-            text={formatCardinalityRange(data.endMinCardinality, cardinalityEnd)}
-            color={data.color}
-          />
+          {(route?.showStartCardinality ?? true) && (
+            <CardinalityLabel
+              x={anchors.start.x}
+              y={anchors.start.y}
+              text={formatCardinalityRange(
+                data.startMinCardinality,
+                cardinalityStart,
+              )}
+              color={data.color}
+            />
+          )}
+          {(route?.showEndCardinality ?? true) && (
+            <CardinalityLabel
+              x={anchors.end.x}
+              y={anchors.end.y}
+              text={formatCardinalityRange(
+                data.endMinCardinality,
+                cardinalityEnd,
+              )}
+              color={data.color}
+            />
+          )}
         </>
       )}
     </g>

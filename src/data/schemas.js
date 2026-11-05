@@ -242,6 +242,7 @@ export const jsonSchema = {
           cardinality: { type: "string" },
           startMinCardinality: { type: "integer", enum: [0, 1] },
           endMinCardinality: { type: "integer", enum: [0, 1] },
+          routeOffset: { type: "number" },
           updateConstraint: { type: "string" },
           deleteConstraint: { type: "string" },
           id: { type: ["integer", "string"] },
