@@ -111,8 +111,8 @@ import {
 } from "../../utils/views";
 import { autoArrange } from "../../utils/autoArrange";
 import {
+  createCanvasExport,
   filterCanvasExportNode,
-  getRasterExportPixelRatio,
 } from "../../utils/canvasExport";
 import { schemaQueries } from "../../utils/importFrom/schemaQuery";
 import { findAutoFKRelationships } from "../../utils/autoRelationships";
@@ -128,6 +128,27 @@ const EDITOR_HOTKEY = {
   preventDefault: true,
   ignoreEventWhen: (e) => Boolean(e.target?.closest?.(".monaco-editor")),
 };
+
+async function renderDiagramImage(format) {
+  const canvas = document.getElementById("canvas");
+  const image = createCanvasExport(canvas, format !== "svg");
+
+  try {
+    const options = {
+      backgroundColor: image.backgroundColor,
+      filter: (node) =>
+        (format !== "svg" || node.tagName !== "i") &&
+        filterCanvasExportNode(node),
+      ...(format !== "svg" && { pixelRatio: image.pixelRatio }),
+      ...(format === "jpeg" && { quality: 0.98 }),
+    };
+    const render =
+      format === "svg" ? toSvg : format === "jpeg" ? toJpeg : toPng;
+    return { dataUrl: await render(image.node, options), image };
+  } finally {
+    image.cleanup();
+  }
+}
 
 export default function ControlPanel({
   title,
@@ -701,11 +722,7 @@ export default function ControlPanel({
     }));
   };
   const copyAsImage = () => {
-    const canvas = document.getElementById("canvas");
-    toPng(canvas, {
-      filter: filterCanvasExportNode,
-      pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
-    }).then(function (dataUrl) {
+    renderDiagramImage("png").then(function ({ dataUrl }) {
       const blob = dataURItoBlob(dataUrl);
       navigator.clipboard
         .write([new ClipboardItem({ "image/png": blob })])
@@ -1106,7 +1123,9 @@ export default function ControlPanel({
       try {
         await navigator.clipboard.writeText(window.location.href);
         Toast.success("Link copied");
-      } catch { Toast.error("Could not copy link"); }
+      } catch {
+        Toast.error("Could not copy link");
+      }
       return;
     }
     if (!user) {
@@ -1115,12 +1134,23 @@ export default function ControlPanel({
     }
     setSharing(true);
     try {
-      const isNew = diagramSource !== "cloud" || !diagramId || diagramId === "blank";
+      const isNew =
+        diagramSource !== "cloud" || !diagramId || diagramId === "blank";
       const targetId = isNew ? uuidv4() : diagramId;
       const diagramData = {
-        diagramId: targetId, database, name: title, gistId: "",
-        lastModified: new Date(), tables, references: relationships,
-        notes, areas, views, sqlHeader, pan: transform.pan, zoom: transform.zoom,
+        diagramId: targetId,
+        database,
+        name: title,
+        gistId: "",
+        lastModified: new Date(),
+        tables,
+        references: relationships,
+        notes,
+        areas,
+        views,
+        sqlHeader,
+        pan: transform.pan,
+        zoom: transform.zoom,
         ...(databases[database].hasEnums && { enums }),
         ...(databases[database].hasTypes && { types }),
       };
@@ -1128,7 +1158,11 @@ export default function ControlPanel({
       const { shareToken } = await extensions.cloudShare(targetId);
       const url = `${window.location.origin}/editor/diagrams/${targetId}?share=${encodeURIComponent(shareToken)}`;
       await navigator.clipboard.writeText(url);
-      if (isNew) navigate(`/editor/diagrams/${targetId}`, { replace: true, clearSearch: true });
+      if (isNew)
+        navigate(`/editor/diagrams/${targetId}`, {
+          replace: true,
+          clearSearch: true,
+        });
       Toast.success("Live link copied");
     } catch (err) {
       Toast.error(err.message || "Could not share diagram");
@@ -1310,7 +1344,8 @@ export default function ControlPanel({
         disabled: layout.readOnly,
       },
       delete_diagram: {
-        disabled: layout.readOnly || (diagramSource === "cloud" && !canManageDiagram),
+        disabled:
+          layout.readOnly || (diagramSource === "cloud" && !canManageDiagram),
         warning: {
           title: t("delete_diagram"),
           message: t("are_you_sure_delete_diagram"),
@@ -1577,11 +1612,7 @@ export default function ControlPanel({
           {
             name: "PNG",
             function: () => {
-              const canvas = document.getElementById("canvas");
-              toPng(canvas, {
-                filter: filterCanvasExportNode,
-                pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
-              }).then(function (dataUrl) {
+              renderDiagramImage("png").then(function ({ dataUrl }) {
                 setExportData((prev) => ({
                   ...prev,
                   data: dataUrl,
@@ -1594,37 +1625,26 @@ export default function ControlPanel({
           {
             name: "JPEG",
             function: () => {
-              const canvas = document.getElementById("canvas");
-              toJpeg(canvas, {
-                quality: 0.98,
-                filter: filterCanvasExportNode,
-                pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
-              }).then(
-                function (dataUrl) {
-                  setExportData((prev) => ({
-                    ...prev,
-                    data: dataUrl,
-                    extension: "jpeg",
-                  }));
-                },
-              );
+              renderDiagramImage("jpeg").then(function ({ dataUrl }) {
+                setExportData((prev) => ({
+                  ...prev,
+                  data: dataUrl,
+                  extension: "jpeg",
+                }));
+              });
               openExportModal(MODAL.IMG);
             },
           },
           {
             name: "SVG",
             function: () => {
-              const filter = (node) =>
-                node.tagName !== "i" && filterCanvasExportNode(node);
-              toSvg(document.getElementById("canvas"), { filter: filter }).then(
-                function (dataUrl) {
-                  setExportData((prev) => ({
-                    ...prev,
-                    data: dataUrl,
-                    extension: "svg",
-                  }));
-                },
-              );
+              renderDiagramImage("svg").then(function ({ dataUrl }) {
+                setExportData((prev) => ({
+                  ...prev,
+                  data: dataUrl,
+                  extension: "svg",
+                }));
+              });
               openExportModal(MODAL.IMG);
             },
           },
@@ -1675,25 +1695,10 @@ export default function ControlPanel({
           {
             name: "PDF",
             function: () => {
-              const canvas = document.getElementById("canvas");
               const filename = `${title}_${new Date().toISOString()}`;
-              toJpeg(canvas, {
-                quality: 0.98,
-                filter: filterCanvasExportNode,
-                pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
-              }).then(function (dataUrl) {
-                const doc = new jsPDF("l", "px", [
-                  canvas.offsetWidth,
-                  canvas.offsetHeight,
-                ]);
-                doc.addImage(
-                  dataUrl,
-                  "jpeg",
-                  0,
-                  0,
-                  canvas.offsetWidth,
-                  canvas.offsetHeight,
-                );
+              renderDiagramImage("jpeg").then(function ({ dataUrl, image }) {
+                const doc = new jsPDF("l", "px", [image.width, image.height]);
+                doc.addImage(dataUrl, "jpeg", 0, 0, image.width, image.height);
                 doc.save(`${filename}.pdf`);
               });
             },
@@ -2089,8 +2094,15 @@ export default function ControlPanel({
             <div className="flex shrink-0 items-center gap-3">
               <Slot name="header-actions-start" />
               {diagramSource === "cloud" && (
-                <span className="rounded-full border border-color px-2.5 py-1 text-xs text-zinc-600 dark:text-zinc-300" title={connected ? "Live connection active" : "Reconnecting"}>
-                  <span className={connected ? "text-emerald-500" : "text-zinc-400"}>●</span>{" "}
+                <span
+                  className="rounded-full border border-color px-2.5 py-1 text-xs text-zinc-600 dark:text-zinc-300"
+                  title={connected ? "Live connection active" : "Reconnecting"}
+                >
+                  <span
+                    className={connected ? "text-emerald-500" : "text-zinc-400"}
+                  >
+                    ●
+                  </span>{" "}
                   {people.length} here
                 </span>
               )}
@@ -2380,7 +2392,12 @@ export default function ControlPanel({
               className="h-10 w-10 rounded-lg"
             />
           </Link>
-          <div className="flex shrink-0 flex-col items-start gap-1" title={!user ? "To share, you must first have an account." : undefined}>
+          <div
+            className="flex shrink-0 flex-col items-start gap-1"
+            title={
+              !user ? "To share, you must first have an account." : undefined
+            }
+          >
             <Button
               type="primary"
               theme="solid"
@@ -2394,7 +2411,14 @@ export default function ControlPanel({
             >
               {t("share")}
             </Button>
-            {!user && <span id="share-account-hint" className="text-xs leading-tight text-zinc-600 dark:text-zinc-300">To share, you must first have an account.</span>}
+            {!user && (
+              <span
+                id="share-account-hint"
+                className="text-xs leading-tight text-zinc-600 dark:text-zinc-300"
+              >
+                To share, you must first have an account.
+              </span>
+            )}
           </div>
           <div className="min-w-0 border-s border-color ps-4">
             <div className="flex min-w-0 items-center gap-2">
@@ -2430,7 +2454,9 @@ export default function ControlPanel({
                 <span className="select-none text-zinc-400 dark:text-zinc-500 mx-1">
                   /
                 </span>
-                <span className="max-w-48 truncate" title={title}>{title}</span>
+                <span className="max-w-48 truncate" title={title}>
+                  {title}
+                </span>
                 {version && (
                   <Tag className="mt-1" color="blue" size="small">
                     {version.substring(0, 7)}

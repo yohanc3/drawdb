@@ -1035,6 +1035,7 @@ export default function Canvas() {
                 </pattern>
               </defs>
               <rect
+                data-export-background="true"
                 x={viewBox.left}
                 y={viewBox.top}
                 width={viewBox.width}
@@ -1099,6 +1100,7 @@ export default function Canvas() {
           ))}
           {linking && (
             <path
+              data-export-exclude="true"
               d={`M ${linkingLine.startX} ${linkingLine.startY} L ${linkingLine.endX} ${linkingLine.endY}`}
               stroke="red"
               strokeDasharray="8,8"
@@ -1115,6 +1117,7 @@ export default function Canvas() {
           ))}
           {bulkSelectRect.show && (
             <rect
+              data-export-exclude="true"
               {...getRectFromEndpoints(bulkSelectRect)}
               stroke="grey"
               fill="grey"

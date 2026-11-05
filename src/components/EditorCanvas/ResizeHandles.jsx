@@ -118,9 +118,9 @@ export default function ResizeHandles({
   };
 
   return (
-    <>
+    <g data-export-exclude="true">
       {handle("left")}
       {handle("right")}
-    </>
+    </g>
   );
 }

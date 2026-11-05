@@ -204,6 +204,7 @@ export default memo(function Area({
     <g ref={ref}>
       <foreignObject
         key={data.id}
+        data-export-bounds="true"
         x={data.x}
         y={data.y}
         width={data.width > 0 ? data.width : 0}
@@ -267,7 +268,7 @@ export default memo(function Area({
         </div>
       </foreignObject>
       {isHovered && (
-        <>
+        <g data-export-exclude="true">
           <circle
             cx={data.x}
             cy={data.y}
@@ -308,7 +309,7 @@ export default memo(function Area({
             cursor="nwse-resize"
             onPointerDown={(e) => e.isPrimary && handleResize(e, "br")}
           />
-        </>
+        </g>
       )}
     </g>
   );

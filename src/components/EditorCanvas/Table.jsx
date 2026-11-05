@@ -249,6 +249,7 @@ export default memo(function Table({
     <>
       <foreignObject
         key={tableData.id}
+        data-export-inset={shadowInset}
         x={tableData.x - shadowInset}
         y={tableData.y - shadowInset}
         width={width + shadowInset * 2}

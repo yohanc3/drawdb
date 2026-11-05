@@ -216,6 +216,7 @@ export default memo(function Note({ data, onPointerDown }) {
       onDoubleClick={edit}
     >
       <path
+        data-export-bounds="true"
         d={`M${data.x + noteFold} ${data.y} L${data.x + width - noteRadius} ${
           data.y
         } A${noteRadius} ${noteRadius} 0 0 1 ${data.x + width} ${data.y + noteRadius} L${data.x + width} ${
@@ -257,7 +258,7 @@ export default memo(function Note({ data, onPointerDown }) {
       />
 
       {!layout.readOnly && !data.locked && hovered && (
-        <g style={{ pointerEvents: "none" }}>
+        <g data-export-exclude="true" style={{ pointerEvents: "none" }}>
           <circle
             cx={data.x}
             cy={data.y + data.height / 2}
@@ -280,6 +281,7 @@ export default memo(function Note({ data, onPointerDown }) {
       )}
       {!layout.readOnly && !data.locked && (
         <rect
+          data-export-exclude="true"
           x={data.x - 4}
           y={data.y + 8}
           width={8}
