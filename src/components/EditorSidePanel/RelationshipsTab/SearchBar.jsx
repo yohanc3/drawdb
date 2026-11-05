@@ -12,12 +12,12 @@ export default function SearchBar() {
   const { t } = useTranslation();
 
   const [filteredResult, setFilteredResult] = useState(
-    relationships.map((t) => t.name),
+    relationships.map((t) => t.name).filter(Boolean),
   );
 
   const handleStringSearch = (value) => {
     setFilteredResult(
-      relationships.map((t) => t.name).filter((i) => i.includes(value)),
+      relationships.map((t) => t.name).filter((i) => i && i.includes(value)),
     );
   };
 
@@ -32,7 +32,9 @@ export default function SearchBar() {
       onSearch={(v) => handleStringSearch(v)}
       onChange={(v) => setSearchText(v)}
       onSelect={(v) => {
-        const { id } = relationships.find((t) => t.name === v);
+        const relationship = relationships.find((t) => t.name === v);
+        if (!relationship) return;
+        const { id } = relationship;
         setSelectedElement((prev) => ({
           ...prev,
           id: id,

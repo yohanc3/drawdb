@@ -14,6 +14,13 @@ export function getFkColumnNames(relationship, startTable, endTable) {
   return { startColumns, endColumns };
 }
 
+export function relationshipConstraintName(relationship) {
+  return (
+    relationship.name?.trim() ||
+    `fk_${String(relationship.id).replaceAll("-", "").slice(0, 24)}`
+  );
+}
+
 export function parseDefault(field, database = DB.GENERIC) {
   if (typeof field.default !== "string") {
     return field.default;

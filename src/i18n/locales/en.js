@@ -105,6 +105,7 @@ const en = {
     no_tables: "No tables",
     no_tables_text: "Start building your diagram!",
     no_relationships: "No relationships",
+    unnamed_relationship: "Unnamed relationship",
     no_relationships_text: "Drag to connect columns and form relationships!",
     no_subject_areas: "No subject areas",
     no_subject_areas_text: "Add subject areas to group tables!",

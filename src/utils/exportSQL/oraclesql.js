@@ -4,6 +4,7 @@ import {
   parseDefault,
   uniqueConstraintClause,
   getFkColumnNames,
+  relationshipConstraintName,
 } from "./shared";
 
 function oracleDeleteClause(constraint) {
@@ -73,7 +74,7 @@ function tablesToOracleSQL(diagram) {
         { fields: startFields },
         endTable,
       );
-      return `ALTER TABLE "${startName}"\nADD CONSTRAINT "${r.name}" FOREIGN KEY (${startColumns
+      return `ALTER TABLE "${startName}"\nADD CONSTRAINT "${relationshipConstraintName(r)}" FOREIGN KEY (${startColumns
         .map((c) => `"${c}"`)
         .join(", ")}) REFERENCES "${endName}" (${endColumns
         .map((c) => `"${c}"`)

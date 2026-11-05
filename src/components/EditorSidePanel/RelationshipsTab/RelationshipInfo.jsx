@@ -271,7 +271,6 @@ export default function RelationshipInfo({ data }) {
         <div className="text-md font-semibold break-keep">{t("name")}: </div>
         <Input
           value={data.name}
-          validateStatus={data.name.trim() === "" ? "error" : "default"}
           placeholder={t("name")}
           className="ms-2"
           readonly={layout.readOnly}

@@ -299,6 +299,7 @@ export function getIssues(diagram) {
 
   const duplicateFKName = {};
   diagram.relationships.forEach((r) => {
+    if (!r.name?.trim()) return;
     if (duplicateFKName[r.name]) {
       issues.push(i18n.t("duplicate_reference", { refName: r.name }));
     } else {

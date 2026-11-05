@@ -64,6 +64,7 @@ const RelationshipListItem = memo(function RelationshipListItem({
   relationship,
 }) {
   const { layout } = useLayout();
+  const { t } = useTranslation();
 
   return (
     <div id={`scroll_ref_${relationship.id}`}>
@@ -73,7 +74,7 @@ const RelationshipListItem = memo(function RelationshipListItem({
           <div className="w-full flex items-center gap-2">
             <DragHandle readOnly={layout.readOnly} id={relationship.id} />
             <div className="overflow-hidden text-ellipsis whitespace-nowrap">
-              {relationship.name}
+              {relationship.name?.trim() || t("unnamed_relationship")}
             </div>
           </div>
         }

@@ -256,7 +256,7 @@ const RelationshipPath = memo(function RelationshipPath({
         fill="none"
         cursor="pointer"
       />
-      {settings.showRelationshipLabels && (
+      {settings.showRelationshipLabels && data.name?.trim() && (
         <text
           x={anchors?.label.x ?? 0}
           y={anchors?.label.y ?? 0}
