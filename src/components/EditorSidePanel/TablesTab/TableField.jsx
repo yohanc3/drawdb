@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Action, ObjectType } from "../../../data/constants";
 import { Input, Button, Popover, Select } from "@douyinfe/semi-ui";
-import { IconMore, IconKeyStroked } from "@douyinfe/semi-icons";
+import { IconMore } from "@douyinfe/semi-icons";
 import {
   useEnums,
   useDiagram,
@@ -27,10 +27,10 @@ export default function TableField({ data, tid, index, inherited }) {
   const table = useMemo(() => tables.find((t) => t.id === tid), [tables, tid]);
 
   return (
-    <div className="hover-1 my-2 flex gap-2 items-center">
+    <div className="hover-1 my-2 flex gap-1 items-center">
       <DragHandle readOnly={layout.readOnly} id={data.id} />
 
-      <div className="min-w-20 flex-1/3">
+      <div className="min-w-20 flex-1">
         <Input
           value={data.name}
           id={`scroll_table_${tid}_input_${index}`}
@@ -64,7 +64,7 @@ export default function TableField({ data, tid, index, inherited }) {
         />
       </div>
 
-      <div className="min-w-24 flex-1/3">
+      <div className="min-w-20 flex-1">
         <Select
           className="w-full"
           optionList={[
@@ -154,9 +154,13 @@ export default function TableField({ data, tid, index, inherited }) {
 
       <div>
         <Button
-          title={t("nullable")}
-          type={data.notNull ? "tertiary" : "primary"}
-          theme={data.notNull ? "light" : "solid"}
+          title={t("not_null")}
+          aria-label={t("not_null")}
+          aria-pressed={Boolean(data.notNull)}
+          disabled={layout.readOnly}
+          style={{ paddingInline: 6, fontSize: 11 }}
+          type={data.notNull ? "primary" : "tertiary"}
+          theme={data.notNull ? "solid" : "light"}
           onClick={() => {
             if (layout.readOnly) return;
 
@@ -180,16 +184,19 @@ export default function TableField({ data, tid, index, inherited }) {
             updateField(tid, data.id, { notNull: !data.notNull });
           }}
         >
-          ?
+          NOT NULL
         </Button>
       </div>
 
       <div>
         <Button
           title={t("primary")}
+          aria-label={t("primary")}
+          aria-pressed={Boolean(data.primary)}
+          disabled={layout.readOnly}
           theme={data.primary ? "solid" : "light"}
           type={data.primary ? "primary" : "tertiary"}
-          icon={<IconKeyStroked />}
+          style={{ paddingInline: 6, fontSize: 11 }}
           onClick={() => {
             if (layout.readOnly) return;
 
@@ -212,7 +219,9 @@ export default function TableField({ data, tid, index, inherited }) {
             setRedoStack([]);
             updateField(tid, data.id, { primary: !data.primary });
           }}
-        />
+        >
+          PK
+        </Button>
       </div>
 
       <div>

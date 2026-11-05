@@ -332,7 +332,7 @@ export default memo(function View({ viewData, onPointerDown }) {
                 <span className="overflow-hidden text-ellipsis whitespace-nowrap">
                   {column.name}
                 </span>
-                {settings.showDataTypes && resolved && (
+                {resolved && (
                   <span
                     className={
                       "shrink-0 font-mono " +

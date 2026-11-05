@@ -7,11 +7,14 @@ import LandingPage from "./pages/LandingPage";
 import SettingsContextProvider from "./context/SettingsContext";
 import NotFound from "./pages/NotFound";
 import MigrationBanner, { isLegacyHost } from "./components/MigrationBanner";
+import AuthProvider from "./context/AuthContext";
+import HomeRedirect from "./pages/HomeRedirect";
 
 export default function App() {
   const routes = (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<HomeRedirect />} />
+      <Route path="/welcome" element={<LandingPage />} />
       <Route path="/editor" element={<Editor />} />
       <Route path="/editor/diagrams/:id" element={<Editor />} />
       <Route path="/editor/templates/:id" element={<Editor />} />
@@ -24,15 +27,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <SettingsContextProvider>
-        <RestoreScroll />
-        {isLegacyHost() ? (
-          <div className="h-full flex flex-col">
-            <MigrationBanner />
-            <div className="flex-1 min-h-0">{routes}</div>
-          </div>
-        ) : (
-          routes
-        )}
+        <AuthProvider>
+          <RestoreScroll />
+          {isLegacyHost() ? (
+            <div className="h-full flex flex-col">
+              <MigrationBanner />
+              <div className="flex-1 min-h-0">{routes}</div>
+            </div>
+          ) : routes}
+        </AuthProvider>
       </SettingsContextProvider>
     </BrowserRouter>
   );

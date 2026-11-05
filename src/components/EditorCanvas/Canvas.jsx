@@ -50,6 +50,7 @@ import {
 } from "../../utils/rect";
 import { State, noteWidth } from "../../data/constants";
 import { nanoid } from "nanoid";
+import { clientId } from "../../api/cloud";
 
 const noHiddenAreas = {
   areaHiddenTableIds: new Set(),
@@ -100,7 +101,7 @@ export default function Canvas() {
     endX: 0,
     endY: 0,
   });
-  const { emitAwareness } = useCollab();
+  const { emitAwareness, people } = useCollab();
   const lastLinkingRef = useRef(false);
   const rightClickPanned = useRef(false);
 
@@ -424,6 +425,14 @@ export default function Canvas() {
    * @param {PointerEvent} e
    */
   const handlePointerMove = (e) => {
+    if (e.isPrimary && canvasRef.current) {
+      const svg = canvasRef.current;
+      const point = svg.createSVGPoint();
+      point.x = e.clientX;
+      point.y = e.clientY;
+      const coords = point.matrixTransform(svg.getScreenCTM().inverse());
+      emitAwareness({ cursor: { x: coords.x, y: coords.y } });
+    }
     if (selectedElement.open && !layout.sidebar) return;
 
     if (!e.isPrimary) return;
@@ -1058,6 +1067,13 @@ export default function Canvas() {
               strokeDasharray={10}
             />
           )}
+          {people.filter((person) => person.id !== clientId && person.cursor).map((person) => (
+            <g key={person.id} transform={`translate(${person.cursor.x} ${person.cursor.y})`} className="pointer-events-none">
+              <path d="M 0 0 L 0 19 L 5 14 L 10 24 L 13 22 L 8 12 L 16 12 Z" fill={person.color} stroke="white" strokeWidth="1.5" />
+              <rect x="14" y="16" width={Math.max(48, person.name.length * 8 + 12)} height="22" rx="4" fill={person.color} />
+              <text x="20" y="31" fill="white" fontSize="12">{person.name}</text>
+            </g>
+          ))}
         </svg>
       </div>
       <TableEditSheet />

@@ -6,7 +6,8 @@ export default function useNavigateWithParams() {
 
   return useCallback(
     (to, options = {}) => {
-      navigate(to + window.location.search, options);
+      const { clearSearch, ...navigateOptions } = options;
+      navigate(to + (clearSearch || to.includes("?") ? "" : window.location.search), navigateOptions);
     },
     [navigate],
   );

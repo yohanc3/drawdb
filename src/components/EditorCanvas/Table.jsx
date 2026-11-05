@@ -14,7 +14,6 @@ import {
   IconDeleteStroked,
   IconEditStroked,
   IconCopyStroked,
-  IconKeyStroked,
   IconLock,
   IconUnlock,
 } from "@douyinfe/semi-icons";
@@ -67,6 +66,7 @@ export default memo(function Table({
   );
   const { setUndoStack, setRedoStack } = useContext(UndoRedoActionsContext);
   const { settings } = useSettings();
+  const { relationships } = useDiagram();
   const { t } = useTranslation();
   const { setSelectedElement, setBulkSelectedElements } =
     useContext(SelectActionsContext);
@@ -92,6 +92,17 @@ export default memo(function Table({
     () => visibleFieldEntries.map(({ field }) => field),
     [visibleFieldEntries],
   );
+
+  const foreignKeyFieldIds = useMemo(() => {
+    const fieldIds = new Set();
+    for (const relationship of relationships) {
+      if (relationship.startTableId !== tableData.id) continue;
+      for (const pair of getRelationshipFields(relationship)) {
+        fieldIds.add(pair.startFieldId);
+      }
+    }
+    return fieldIds;
+  }, [relationships, tableData.id]);
 
   const toggleTableCollapse = (e) => {
     e.stopPropagation();
@@ -503,9 +514,24 @@ export default memo(function Table({
                 }));
               }}
             />
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
               {fieldData.name}
             </span>
+            {fieldData.primary && (
+              <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-900 dark:text-blue-100" title={t("primary_key")}>
+                PK
+              </span>
+            )}
+            {foreignKeyFieldIds.has(fieldData.id) && (
+              <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-100" title={t("foreign_key")}>
+                FK
+              </span>
+            )}
+            {fieldData.notNull && (
+              <span className="shrink-0 rounded bg-zinc-200 px-1 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100" title={t("not_null")}>
+                NOT NULL
+              </span>
+            )}
           </div>
           <div className="text-zinc-400">
             {hoveredField === index ? (
@@ -522,9 +548,8 @@ export default memo(function Table({
                   deleteField(fieldData, tableData.id);
                 }}
               />
-            ) : settings.showDataTypes ? (
+            ) : (
               <div className="flex gap-1 items-center">
-                {fieldData.primary && <IconKeyStroked />}
                 {!fieldData.notNull && <span className="font-mono">?</span>}
                 <span
                   className={
@@ -543,7 +568,7 @@ export default memo(function Table({
                       : "")}
                 </span>
               </div>
-            ) : null}
+            )}
           </div>
         </div>
         {showFieldComment && (

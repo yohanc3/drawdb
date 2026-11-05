@@ -118,6 +118,8 @@ import { DateTime } from "luxon";
 import ConfigureCustomTypes from "./ConfigureCustomTypes";
 import { useDiagramList } from "./Modal/Open/hooks/useDiagramList";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
+import AccountActions from "../AccountActions";
+import { useAuth } from "../../context/AuthContext";
 
 const EDITOR_HOTKEY = {
   preventDefault: true,
@@ -128,15 +130,20 @@ export default function ControlPanel({
   title,
   setTitle,
   lastSaved,
-  setLastSaved,
   toolbarContainer,
   startWith,
   setStartWith,
   onBackToStart,
+  diagramSource,
+  canManageDiagram,
+  people,
+  connected,
 }) {
   const { id: diagramId } = useParams();
 
   const [modal, setModal] = useState(MODAL.NONE);
+  const [sharing, setSharing] = useState(false);
+  const { user, openAuth } = useAuth();
   const [sidesheet, setSidesheet] = useState(SIDESHEET.NONE);
   const [showEditName, setShowEditName] = useState(false);
   const [showAutoConnectModal, setShowAutoConnectModal] = useState(false);
@@ -1087,48 +1094,42 @@ export default function ControlPanel({
   const toggleDBMLEditor = () => {
     setLayout((prev) => ({ ...prev, dbmlEditor: !prev.dbmlEditor }));
   };
-  const save = async () => {
-    if (typeof extensions.cloudSave === "function") {
-      // TODO: dont have blank here have null
-      const isNew = diagramId === "blank";
-      const newId = isNew ? uuidv4() : diagramId;
+  const save = () => setSaveState(State.SAVING);
+
+  const shareLive = async () => {
+    if (layout.readOnly || (diagramSource === "cloud" && !canManageDiagram)) {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        Toast.success("Link copied");
+      } catch { Toast.error("Could not copy link"); }
+      return;
+    }
+    if (!user) {
+      openAuth("signup");
+      return;
+    }
+    setSharing(true);
+    try {
+      const isNew = diagramSource !== "cloud" || !diagramId || diagramId === "blank";
+      const targetId = isNew ? uuidv4() : diagramId;
       const diagramData = {
-        diagramId: newId,
-        database,
-        name: title,
-        gistId: gistId ?? "",
-        lastModified: new Date(),
-        tables,
-        references: relationships,
-        notes,
-        areas,
-        views,
-        sqlHeader,
-        pan: transform.pan,
-        zoom: transform.zoom,
+        diagramId: targetId, database, name: title, gistId: "",
+        lastModified: new Date(), tables, references: relationships,
+        notes, areas, views, sqlHeader, pan: transform.pan, zoom: transform.zoom,
         ...(databases[database].hasEnums && { enums }),
         ...(databases[database].hasTypes && { types }),
       };
-      try {
-        await extensions.cloudSave(diagramData, { isNew });
-        if (isNew) {
-          navigate(`/editor/diagrams/${newId}`, { replace: true });
-        }
-        setSaveState(State.SAVED);
-        if (typeof setLastSaved === "function") {
-          setLastSaved(new Date().toLocaleString());
-        }
-      } catch (err) {
-        if (err?.response?.status === 402) {
-          setSaveState(State.NONE);
-          navigate("/checkout?tier=solo_pro");
-          return;
-        }
-        setSaveState(State.ERROR);
-      }
-      return;
+      if (isNew) await extensions.cloudSave(diagramData, { isNew: true });
+      const { shareToken } = await extensions.cloudShare(targetId);
+      const url = `${window.location.origin}/editor/diagrams/${targetId}?share=${encodeURIComponent(shareToken)}`;
+      await navigator.clipboard.writeText(url);
+      if (isNew) navigate(`/editor/diagrams/${targetId}`, { replace: true, clearSearch: true });
+      Toast.success("Live link copied");
+    } catch (err) {
+      Toast.error(err.message || "Could not share diagram");
+    } finally {
+      setSharing(false);
     }
-    setSaveState(State.SAVING);
   };
   const { cloud, local } = useDiagramList();
   const recentlyOpenedDiagrams = useMemo(() => {
@@ -1203,7 +1204,7 @@ export default function ControlPanel({
           {t("saved_as_copy")}{" "}
           <Typography.Text
             link={{
-              href: `/editor/diagrams/${newId}${window.location.search}`,
+              href: `/editor/diagrams/${newId}`,
               target: "_blank",
               rel: "noopener noreferrer",
             }}
@@ -1273,7 +1274,7 @@ export default function ControlPanel({
       save_as: {
         function: saveDiagramAs,
         shortcut: "Ctrl+Shift+S",
-        disabled: layout.readOnly,
+        disabled: false,
       },
       save_as_template: {
         function: async () => {
@@ -1304,6 +1305,7 @@ export default function ControlPanel({
         disabled: layout.readOnly,
       },
       delete_diagram: {
+        disabled: layout.readOnly || (diagramSource === "cloud" && !canManageDiagram),
         warning: {
           title: t("delete_diagram"),
           message: t("are_you_sure_delete_diagram"),
@@ -1883,18 +1885,6 @@ export default function ControlPanel({
             showComments: !prev.showComments,
           })),
       },
-      show_datatype: {
-        state: settings.showDataTypes ? (
-          <i className="bi bi-toggle-on" />
-        ) : (
-          <i className="bi bi-toggle-off" />
-        ),
-        function: () =>
-          setSettings((prev) => ({
-            ...prev,
-            showDataTypes: !prev.showDataTypes,
-          })),
-      },
       show_grid: {
         state: settings.showGrid ? (
           <i className="bi bi-toggle-on" />
@@ -2075,23 +2065,19 @@ export default function ControlPanel({
       <div>
         {layout.header && (
           <div
-            className="flex justify-between items-center border-b border-color pb-2"
+            className="flex min-h-[76px] items-center justify-between gap-4 border-b border-color px-5 py-2"
             style={isRtl(i18n.language) ? { direction: "rtl" } : {}}
           >
             {header()}
-            <div className="flex items-center gap-2 me-7">
+            <div className="flex shrink-0 items-center gap-3">
               <Slot name="header-actions-start" />
-              {!isTemplate && (
-                <Button
-                  type="primary"
-                  className="!text-base !pe-6 !ps-5 !py-[18px] !rounded-md"
-                  size="default"
-                  icon={<IconShareStroked />}
-                  onClick={() => setModal(MODAL.SHARE)}
-                >
-                  {t("share")}
-                </Button>
+              {diagramSource === "cloud" && (
+                <span className="rounded-full border border-color px-2.5 py-1 text-xs text-zinc-600 dark:text-zinc-300" title={connected ? "Live connection active" : "Reconnecting"}>
+                  <span className={connected ? "text-emerald-500" : "text-zinc-400"}>●</span>{" "}
+                  {people.length} here
+                </span>
               )}
+              <AccountActions />
               <Slot name="header-actions-end" />
             </div>
           </div>
@@ -2365,20 +2351,36 @@ export default function ControlPanel({
   function header() {
     return (
       <nav
-        className="flex justify-between pt-1 items-center whitespace-nowrap"
+        className="flex min-w-0 items-center gap-4 whitespace-nowrap"
         style={isRtl(i18n.language) ? { direction: "rtl" } : {}}
       >
-        <div className="flex justify-start items-center">
-          <Link to="/">
+        <div className="flex min-w-0 items-center gap-4">
+          <Link to="/" className="shrink-0">
             <img
-              width={54}
+              width={40}
               src={icon}
               alt={t("logo")}
-              className="ms-7 min-w-[54px]"
+              className="h-10 w-10 rounded-lg"
             />
           </Link>
-          <div className="ms-1 mt-1">
-            <div className="flex items-center ms-3 gap-2">
+          <div className="flex shrink-0 flex-col items-start gap-1" title={!user ? "To share, you must first have an account." : undefined}>
+            <Button
+              type="primary"
+              theme="solid"
+              size="default"
+              className="!h-9 !rounded-lg !px-4 !font-medium"
+              icon={<IconShareStroked />}
+              onClick={shareLive}
+              loading={sharing}
+              disabled={!user || isTemplate}
+              aria-describedby={!user ? "share-account-hint" : undefined}
+            >
+              {t("share")}
+            </Button>
+            {!user && <span id="share-account-hint" className="text-xs leading-tight text-zinc-600 dark:text-zinc-300">To share, you must first have an account.</span>}
+          </div>
+          <div className="min-w-0 border-s border-color ps-4">
+            <div className="flex min-w-0 items-center gap-2">
               {databases[database].image && (
                 <img
                   src={databases[database].image}
@@ -2397,7 +2399,7 @@ export default function ControlPanel({
               )}
               <Slot name="diagram-title-prefix" />
               <div
-                className="text-xl flex items-center gap-1 me-1"
+                className="flex min-w-0 items-center gap-1 text-base font-semibold"
                 onPointerEnter={(e) => e.isPrimary && setShowEditName(true)}
                 onPointerLeave={(e) => e.isPrimary && setShowEditName(false)}
                 onPointerDown={(e) => {
@@ -2411,7 +2413,7 @@ export default function ControlPanel({
                 <span className="select-none text-zinc-400 dark:text-zinc-500 mx-1">
                   /
                 </span>
-                <span>{title}</span>
+                <span className="max-w-48 truncate" title={title}>{title}</span>
                 {version && (
                   <Tag className="mt-1" color="blue" size="small">
                     {version.substring(0, 7)}
@@ -2423,7 +2425,7 @@ export default function ControlPanel({
               )}
             </div>
             <div className="flex items-center">
-              <div className="flex justify-start text-md select-none me-2">
+              <div className="flex justify-start select-none text-sm">
                 {Object.keys(menu).map((category) => (
                   <Dropdown
                     key={category}

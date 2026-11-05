@@ -1,3 +1,5 @@
+This fork adds free server-backed diagrams, live collaborative editing, and share links to the original drawDB project. The live app is [drawdb.live](https://drawdb.live).
+
 <div align="center">
     <img width="64" alt="drawDB logo" src="./src/assets/icon-dark.png">
     <h1>drawDB</h1>
