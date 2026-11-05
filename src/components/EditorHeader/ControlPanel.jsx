@@ -47,7 +47,6 @@ import {
   DB,
   IMPORT_FROM,
   noteWidth,
-  pngExportPixelRatio,
   keyboardPanStep,
 } from "../../data/constants";
 import jsPDF from "jspdf";
@@ -111,6 +110,10 @@ import {
   resolveViewColumns,
 } from "../../utils/views";
 import { autoArrange } from "../../utils/autoArrange";
+import {
+  filterCanvasExportNode,
+  getRasterExportPixelRatio,
+} from "../../utils/canvasExport";
 import { schemaQueries } from "../../utils/importFrom/schemaQuery";
 import { findAutoFKRelationships } from "../../utils/autoRelationships";
 import { deleteFromCache, STORAGE_KEY } from "../../utils/cache";
@@ -698,8 +701,10 @@ export default function ControlPanel({
     }));
   };
   const copyAsImage = () => {
-    toPng(document.getElementById("canvas"), {
-      pixelRatio: pngExportPixelRatio,
+    const canvas = document.getElementById("canvas");
+    toPng(canvas, {
+      filter: filterCanvasExportNode,
+      pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
     }).then(function (dataUrl) {
       const blob = dataURItoBlob(dataUrl);
       navigator.clipboard
@@ -1572,8 +1577,10 @@ export default function ControlPanel({
           {
             name: "PNG",
             function: () => {
-              toPng(document.getElementById("canvas"), {
-                pixelRatio: pngExportPixelRatio,
+              const canvas = document.getElementById("canvas");
+              toPng(canvas, {
+                filter: filterCanvasExportNode,
+                pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
               }).then(function (dataUrl) {
                 setExportData((prev) => ({
                   ...prev,
@@ -1587,7 +1594,12 @@ export default function ControlPanel({
           {
             name: "JPEG",
             function: () => {
-              toJpeg(document.getElementById("canvas"), { quality: 0.95 }).then(
+              const canvas = document.getElementById("canvas");
+              toJpeg(canvas, {
+                quality: 0.98,
+                filter: filterCanvasExportNode,
+                pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
+              }).then(
                 function (dataUrl) {
                   setExportData((prev) => ({
                     ...prev,
@@ -1602,7 +1614,8 @@ export default function ControlPanel({
           {
             name: "SVG",
             function: () => {
-              const filter = (node) => node.tagName !== "i";
+              const filter = (node) =>
+                node.tagName !== "i" && filterCanvasExportNode(node);
               toSvg(document.getElementById("canvas"), { filter: filter }).then(
                 function (dataUrl) {
                   setExportData((prev) => ({
@@ -1664,7 +1677,11 @@ export default function ControlPanel({
             function: () => {
               const canvas = document.getElementById("canvas");
               const filename = `${title}_${new Date().toISOString()}`;
-              toJpeg(canvas).then(function (dataUrl) {
+              toJpeg(canvas, {
+                quality: 0.98,
+                filter: filterCanvasExportNode,
+                pixelRatio: getRasterExportPixelRatio(canvas, transform.zoom),
+              }).then(function (dataUrl) {
                 const doc = new jsPDF("l", "px", [
                   canvas.offsetWidth,
                   canvas.offsetHeight,

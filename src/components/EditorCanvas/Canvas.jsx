@@ -1127,6 +1127,7 @@ export default function Canvas() {
             .map((person) => (
               <g
                 key={person.id}
+                data-export-exclude="true"
                 transform={`translate(${person.cursor.x} ${person.cursor.y})`}
                 className="pointer-events-none"
               >
